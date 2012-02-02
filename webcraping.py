@@ -11,7 +11,8 @@
 #-------------------------------------------------------------------------------
 #!/usr/bin/env python
 import sys
-from BeautifulSoup import BeautifulSoup
+from lxml import etree
+import StringIO
 import re
 import urllib2
 
@@ -22,7 +23,7 @@ visitedUrl = set()
 def crawl(urlToParse, depth,textSearch):
     if (depth == 0):
         return
-    if (urlToParse.find('html') != 0):
+    if (urlToParse.find("http") != 0):
         return
     if(urlToParse in visitedUrl):
         print 'skip %s' %urlToParse
@@ -30,15 +31,17 @@ def crawl(urlToParse, depth,textSearch):
     visitedUrl.add(urlToParse)
 
     html = getPage(urlToParse)
-    soup = BeautifulSoup(html)
-
+    #using lxml to parse html
+    parser = etree.HTMLParser()
+    tree = etree.parse(StringIO.StringIO(html), parser)
+    content = tree.xpath('string()')
+    if (re.match(textSearch, content, re.IGNORECASE)):
+        print urlToParse
     #Find all links. Note: wee filter anchor that do not have a destination
-    links = soup.findAll('a')
+    links = tree.xpath('//a[@href]')
     for link in links:
-        crawl(link['href'], depth - 1, textSearch)
-    if text in soup:
-        print ("Found " + urlToParse)
-
+        if ('href' in link.attrib):
+            crawl(link.attrib['href'], depth -1, textSearch)
 
 def getPage(url):
     try:
